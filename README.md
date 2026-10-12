@@ -23,7 +23,8 @@
 
 ## Out of sight. Within reach.
 
-Every screenshot you take hangs on a line just above your screen.
+Every screenshot you take hangs on a line just above your screen — and so
+does plain text you copy, hanging as a card whose words you can copy back.
 Rest the pointer in the menu bar and it glides down. Move away and it's gone.
 
 <picture>
