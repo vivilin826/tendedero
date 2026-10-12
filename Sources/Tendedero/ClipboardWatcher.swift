@@ -183,8 +183,18 @@ final class ClipboardWatcher {
     /// Saves a copied image, and for a text card the original text next to it
     /// in a same-named `.txt` file. Copying the card from the line then pastes
     /// the text itself, not a picture of it.
+    ///
+    /// Copying a card back (or copying the same text again) puts the same
+    /// string on the clipboard; that must not hang a second card. The image
+    /// path already dedupes by PNG bytes; text is deduped by scanning the
+    /// inbox for a companion `.txt` with the same content, so a card already
+    /// on the line is never duplicated no matter how often its text is copied.
     private func save(_ png: Data, text: String? = nil) {
-        if let last, last.png == png, FileManager.default.fileExists(atPath: last.url.path) { return }
+        if let text, textCardAlreadyHung(text) {
+            return
+        } else if text == nil, let last, last.png == png, FileManager.default.fileExists(atPath: last.url.path) {
+            return
+        }
         let fm = FileManager.default
         var url = Inbox.folder.appendingPathComponent("Clipboard \(Self.stamp()).png")
         var n = 2
@@ -202,13 +212,31 @@ final class ClipboardWatcher {
                 try text.write(to: textURL, atomically: true, encoding: .utf8)
                 try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: textURL.path)
             }
-            last = (png, url)
+            if text != nil {
+                last = nil
+            } else {
+                last = (png, url)
+            }
             onImage(url)
         } catch {
             try? fm.removeItem(at: url)
             try? fm.removeItem(at: url.deletingPathExtension().appendingPathExtension("txt"))
             log.error("Could not save a copied image: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Whether a card with this exact text is already hanging: its companion
+    /// `.txt` exists in the inbox with the same content, and the card PNG is
+    /// still there with it.
+    private func textCardAlreadyHung(_ text: String) -> Bool {
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: Inbox.folder.path) else { return false }
+        for file in files where file.hasSuffix(".txt") {
+            let textURL = Inbox.folder.appendingPathComponent(file)
+            guard let existing = try? String(contentsOf: textURL, encoding: .utf8), existing == text else { continue }
+            let pngURL = textURL.deletingPathExtension().appendingPathExtension("png")
+            if FileManager.default.fileExists(atPath: pngURL.path) { return true }
+        }
+        return false
     }
 
     private static func stamp() -> String {
