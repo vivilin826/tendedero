@@ -42,9 +42,9 @@
 "When the pointer rests in the menu bar" = "Göstərici menyu panelində dayananda";
 "When something new hangs" = "Yeni bir şey asılanda";
 "Over full screen apps" = "Tam ekran proqramların üzərində";
-"Hang copied images" = "Kopyalanmış şəkilləri as";
-"Images you copy hang on the line too" = "Kopyaladığınız şəkillər də ipdən asılır";
-"Tendedero, hanging copied images" = "Tendedero, kopyalanmış şəkilləri asır";
+"Hang copied images and text" = "Kopyalanmış şəkilləri və mətni as";
+"Images and text you copy hang on the line too" = "Kopyaladığınız şəkillər və mətnlər də ipdən asılır";
+"Tendedero, hanging copied images and text" = "Tendedero, kopyalanmış şəkilləri və mətni asır";
 
 /* GrabArea */
 "Copy" = "Kopyala";

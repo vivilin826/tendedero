@@ -40,9 +40,9 @@
 "When the pointer rests in the menu bar" = "ポインタがメニューバーにとどまったとき";
 "When something new hangs" = "新しいものが吊るされたとき";
 "Over full screen apps" = "フルスクリーンのアプリの上にも";
-"Hang copied images" = "コピーした画像を吊るす";
-"Images you copy hang on the line too" = "コピーした画像もロープに吊るされます";
-"Tendedero, hanging copied images" = "Tendedero、コピーした画像を吊るしています";
+"Hang copied images and text" = "コピーした画像とテキストを吊るす";
+"Images and text you copy hang on the line too" = "コピーした画像とテキストもロープに吊るされます";
+"Tendedero, hanging copied images and text" = "Tendedero、コピーした画像とテキストを吊るしています";
 
 /* GrabArea */
 "Copy" = "コピー";

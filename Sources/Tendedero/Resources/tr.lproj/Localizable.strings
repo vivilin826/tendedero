@@ -40,9 +40,9 @@
 "When the pointer rests in the menu bar" = "İşaretçi menü çubuğunda durduğunda";
 "When something new hangs" = "Yeni bir şey asıldığında";
 "Over full screen apps" = "Tam ekran uygulamaların üzerinde";
-"Hang copied images" = "Kopyalanan görselleri as";
-"Images you copy hang on the line too" = "Kopyaladığınız görseller de ipe asılır";
-"Tendedero, hanging copied images" = "Tendedero, kopyalanan görselleri asıyor";
+"Hang copied images and text" = "Kopyalanan görselleri ve metni as";
+"Images and text you copy hang on the line too" = "Kopyaladığınız görseller ve metinler de ipe asılır";
+"Tendedero, hanging copied images and text" = "Tendedero, kopyalanan görselleri ve metni asıyor";
 
 /* GrabArea */
 "Copy" = "Kopyala";

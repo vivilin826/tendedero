@@ -40,9 +40,9 @@
 "When the pointer rests in the menu bar" = "Ao deixar o punteiro na barra de menús";
 "When something new hangs" = "Cando se pendura algo novo";
 "Over full screen apps" = "Sobre apps a pantalla completa";
-"Hang copied images" = "Pendurar imaxes copiadas";
-"Images you copy hang on the line too" = "As imaxes que copias tamén se penduran";
-"Tendedero, hanging copied images" = "Tendedero, pendurando imaxes copiadas";
+"Hang copied images and text" = "Pendurar imaxes e texto copiados";
+"Images and text you copy hang on the line too" = "As imaxes e o texto que copias tamén se penduran";
+"Tendedero, hanging copied images and text" = "Tendedero, pendurando imaxes e texto copiados";
 
 /* GrabArea */
 "Copy" = "Copiar";

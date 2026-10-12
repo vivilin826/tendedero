@@ -613,11 +613,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
     }
 
-    /// The shirt fills in while copied images are hung, so it shows at a
-    /// glance that the clipboard is being watched.
+    /// The shirt fills in while copied images and text are hung, so it shows
+    /// at a glance that the clipboard is being watched.
     private func updateStatusIcon() {
         let on = ClipboardWatcher.isEnabled
-        let description = on ? L("Tendedero, hanging copied images") : "Tendedero"
+        let description = on ? L("Tendedero, hanging copied images and text") : "Tendedero"
         let image = NSImage(systemSymbolName: on ? "tshirt.fill" : "tshirt", accessibilityDescription: description)
         image?.isTemplate = true
         statusItem.button?.image = image
@@ -649,11 +649,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         inbox.toolTip = L("Screenshots hang instantly and skip the Desktop")
         menu.addItem(inbox)
 
-        let clipboard = ClosureMenuItem(L("Hang copied images")) { [weak self] in
+        let clipboard = ClosureMenuItem(L("Hang copied images and text")) { [weak self] in
             self?.setClipboard(!ClipboardWatcher.isEnabled)
         }
         clipboard.state = ClipboardWatcher.isEnabled ? .on : .off
-        clipboard.toolTip = L("Images you copy hang on the line too")
+        clipboard.toolTip = L("Images and text you copy hang on the line too")
         menu.addItem(clipboard)
 
         let bringDown = NSMenuItem(title: L("Bring the line down"), action: nil, keyEquivalent: "")

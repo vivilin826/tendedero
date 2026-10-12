@@ -10,6 +10,9 @@ struct Pegged: Identifiable, Equatable {
     let id = UUID()
     let url: URL
     var thumb: NSImage
+    /// The original text of a copied-text card, or nil for screenshots and
+    /// copied images. Copying the card pastes this text.
+    let text: String?
     /// Every photo hangs a little crooked, like on a real line.
     let tilt = Double.random(in: -2.5...2.5)
     var falling = false
@@ -21,6 +24,15 @@ struct Pegged: Identifiable, Equatable {
     static func == (a: Pegged, b: Pegged) -> Bool {
         a.id == b.id && a.falling == b.falling && a.flying == b.flying && a.thumb === b.thumb
     }
+}
+
+/// The original text of a copied-text card, kept next to the card as a
+/// same-named `.txt` file. Screenshots and copied images have no such file.
+func textCardText(for url: URL) -> String? {
+    let textURL = url.deletingPathExtension().appendingPathExtension("txt")
+    guard FileManager.default.fileExists(atPath: textURL.path),
+          let text = try? String(contentsOf: textURL, encoding: .utf8), !text.isEmpty else { return nil }
+    return text
 }
 
 /// The line itself: what hangs on it and what you can do with each item.
@@ -79,7 +91,7 @@ final class Line: ObservableObject {
     func hang(_ url: URL, quietly: Bool = false, flying: Bool = false) -> UUID? {
         guard !items.contains(where: { $0.url == url && !$0.falling }),
               let thumb = makeThumbnail(url) else { return nil }
-        var item = Pegged(url: url, thumb: thumb)
+        var item = Pegged(url: url, thumb: thumb, text: textCardText(for: url))
         item.flying = flying
         items.append(item)
         scroll = 0
@@ -155,13 +167,20 @@ final class Line: ObservableObject {
 
     func copy(_ id: UUID) {
         guard let item = items.first(where: { $0.id == id }) else { return }
-        let entry = NSPasteboardItem()
-        // A recording is copied as the file, which apps paste as the video.
-        if !item.isRecording, let png = pngData(item.url) { entry.setData(png, forType: .png) }
-        entry.setString(item.url.absoluteString, forType: .fileURL)
         let pb = NSPasteboard.general
         pb.clearContents()
-        pb.writeObjects([entry])
+        // A text card copies as the text itself: what you pasted before hangs
+        // on the line, and pasting it elsewhere gives the text back, not a
+        // picture of the card.
+        if let text = item.text {
+            pb.setString(text, forType: .string)
+        } else {
+            let entry = NSPasteboardItem()
+            // A recording is copied as the file, which apps paste as the video.
+            if !item.isRecording, let png = pngData(item.url) { entry.setData(png, forType: .png) }
+            entry.setString(item.url.absoluteString, forType: .fileURL)
+            pb.writeObjects([entry])
+        }
 
         copiedID = id
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
@@ -182,6 +201,13 @@ final class Line: ObservableObject {
         guard let item = items.first(where: { $0.id == id }) else { return false }
         do {
             try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            // A text card's original text goes with its card.
+            if item.text != nil {
+                let textURL = item.url.deletingPathExtension().appendingPathExtension("txt")
+                if FileManager.default.fileExists(atPath: textURL.path) {
+                    try? FileManager.default.trashItem(at: textURL, resultingItemURL: nil)
+                }
+            }
             log.notice("Trashed \(item.url.lastPathComponent, privacy: .public)")
             if soundOn && !quietly { Line.trashSound?.play() }
             drop(id, quietly: true)
@@ -241,6 +267,15 @@ final class Line: ObservableObject {
         let target = uniqueURL(in: desktop, for: item.url.lastPathComponent)
         do {
             try FileManager.default.moveItem(at: item.url, to: target)
+            // A text card's original text moves with it, so copying the card
+            // still pastes the text.
+            if item.text != nil {
+                let textURL = item.url.deletingPathExtension().appendingPathExtension("txt")
+                let targetText = target.deletingPathExtension().appendingPathExtension("txt")
+                if FileManager.default.fileExists(atPath: textURL.path) {
+                    try FileManager.default.moveItem(at: textURL, to: targetText)
+                }
+            }
             drop(id, quietly: true)
         } catch {
             log.error("Could not save to Desktop: \(error.localizedDescription, privacy: .public)")
@@ -324,7 +359,7 @@ final class Line: ObservableObject {
         for path in paths where FileManager.default.fileExists(atPath: path) {
             let url = URL(fileURLWithPath: path)
             guard !items.contains(where: { $0.url == url }), let thumb = makeThumbnail(url) else { continue }
-            items.append(Pegged(url: url, thumb: thumb))
+            items.append(Pegged(url: url, thumb: thumb, text: textCardText(for: url)))
         }
     }
 

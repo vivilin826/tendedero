@@ -72,13 +72,14 @@ Same shortcuts. Same muscle memory. Just less mess.
 
 <br>
 
-## Copied images too.
+## Copied images and text too.
 
 Take a screenshot with <kbd>⌃</kbd> held, or copy an image in Preview, and it
-hangs on the line like any other. Turn on Hang copied images in the menu bar
-and the shirt fills in while it is on. Only images: anything copied along
-with text or a file, and anything a password manager marks as private, is
-left alone.
+hangs on the line like any other. Copy plain text and it hangs as a card with
+the text on it; copying the card pastes the original text back. Turn on Hang
+copied images and text in the menu bar and the shirt fills in while it is on.
+Only what you copied on its own is hung: anything copied along with a file,
+and anything a password manager marks as private, is left alone.
 
 <br>
 
@@ -141,7 +142,7 @@ so macOS asks again for access to the Desktop after each rebuild.
 | `PeggedView.swift` | One photo: glass frame, clip, swing and breeze |
 | `GrabArea.swift` | Click, long press, drag and drop |
 | `ScreenshotWatcher.swift` | Notices new screenshots |
-| `ClipboardWatcher.swift` | Notices images copied to the clipboard |
+| `ClipboardWatcher.swift` | Notices images and plain text copied to the clipboard |
 | `Inbox.swift` | Takes over screenshot settings and puts them back |
 | `Markup.swift` | Opens the system Markup editor and saves the result |
 | `Trim.swift` | Trims a screen recording and saves the result |
