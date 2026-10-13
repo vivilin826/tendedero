@@ -23,6 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKey: HotKey?
     private var cancellables = Set<AnyCancellable>()
     private var mouseTimer: Timer?
+    /// Retries the shortcut while another app is holding it, so it comes
+    /// back on its own when the holder quits instead of staying dead until
+    /// Tendedero is relaunched.
+    private var shortcutRetryTimer: Timer?
 
     /// Whether the panel is ordered in. It can be in and still tucked away
     /// above the top edge, like an auto-hiding Dock.
@@ -37,7 +41,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotZoneSince: Date?
     /// After a click in the menu bar the line stays up there hidden until the
     /// pointer leaves the menu bar, so it does not come back over a menu.
+    /// The suppression also expires on its own, so a menu bar visit never
+    /// leaves hover dead afterwards.
     private var menuBarSuppressed = false
+    private var menuBarSuppressedUntil = Date.distantPast
     private var clickMonitors: [Any] = []
     private var awaySince: Date?
     /// Whether the line should be up, if nothing prevents it. A full screen
@@ -468,6 +475,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let p = NSEvent.mouseLocation
                 guard NSScreen.screens.contains(where: { NSMouseInRect(p, Self.menuBarBand(of: $0), false) }) else { return }
                 self.menuBarSuppressed = true
+                self.menuBarSuppressedUntil = Date().addingTimeInterval(1.5)
                 self.hotZoneSince = nil
                 if self.isRevealed {
                     self.pinned = false
@@ -492,6 +500,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let screenUnderPointer = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
         let inMenuBar = screenUnderPointer.map { NSMouseInRect(mouse, Self.menuBarBand(of: $0), false) } ?? false
         if !inMenuBar { menuBarSuppressed = false }
+        if menuBarSuppressed && now >= menuBarSuppressedUntil { menuBarSuppressed = false }
 
         guard isRevealed else {
             // Resting in the menu bar brings the line down on that screen.
@@ -564,6 +573,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hotKey = nil
         guard let shortcut = Shortcut.current else { return }
         hotKey = HotKey(shortcut) { [weak self] in self?.toggle() }
+        retryShortcutIfNeeded()
+    }
+
+    /// While another app holds the shortcut, keeps trying until it can be
+    /// registered again. Also stops when the user removes the shortcut.
+    private func retryShortcutIfNeeded() {
+        shortcutRetryTimer?.invalidate()
+        shortcutRetryTimer = nil
+        guard Shortcut.current != nil, hotKey == nil else { return }
+        let timer = Timer(timeInterval: 3.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                guard let shortcut = Shortcut.current, self.hotKey == nil else {
+                    self.shortcutRetryTimer?.invalidate()
+                    self.shortcutRetryTimer = nil
+                    return
+                }
+                self.hotKey = HotKey(shortcut) { [weak self] in self?.toggle() }
+                if self.hotKey != nil {
+                    self.shortcutRetryTimer?.invalidate()
+                    self.shortcutRetryTimer = nil
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        shortcutRetryTimer = timer
     }
 
     private func changeShortcut() {
