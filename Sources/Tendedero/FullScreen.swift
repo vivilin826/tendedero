@@ -13,11 +13,11 @@ enum FullScreen {
     private static let fullScreenSpaceType = 4
 
     /// Whether the line also comes down over full screen apps, so screenshots
-    /// stay within reach while you work in one. Off unless turned on: a video
-    /// or a presentation should not get a clothesline across the top.
+    /// stay within reach while you work in one. On by default; turn it off if
+    /// a video or a presentation should not get a clothesline across the top.
     static var showLineOver: Bool {
-        get { UserDefaults.standard.bool(forKey: "showOverFullScreen") }
-        set { UserDefaults.standard.set(newValue, forKey: "showOverFullScreen") }
+        get { !UserDefaults.standard.bool(forKey: "showOverFullScreenOff") }
+        set { UserDefaults.standard.set(!newValue, forKey: "showOverFullScreenOff") }
     }
 
     /// True when the line should keep away from the given screen.
