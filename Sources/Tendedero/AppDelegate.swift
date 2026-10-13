@@ -28,6 +28,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Tendedero is relaunched.
     private var shortcutRetryTimer: Timer?
 
+    // Diagnostic log: every decision about bringing the line down is written
+    // to debug.log, so "it does not come down on this app" can be pinned to
+    // the exact condition that failed instead of guessing.
+    private static let debugLogURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Tendedero/debug.log")
+    private var lastLogInMenuBar: Bool?
+    private var lastLogSuppressed = false
+
     /// Whether the panel is ordered in. It can be in and still tucked away
     /// above the top edge, like an auto-hiding Dock.
     private var isPresent = false
@@ -111,6 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didActivateApplicationNotification] {
             workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
+                    self?.debugLog("event \(name.rawValue)")
                     self?.refresh()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self?.refresh() }
                 }
@@ -361,11 +370,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refresh() {
         let blocked = panel.screen.map(FullScreen.blocksLine(on:))
             ?? LinePanel.screenUnderPointer().map(FullScreen.blocksLine(on:)) ?? false
-        if keepOpen || (!blocked && (wanted || Self.opensFromMenuBar)) {
+        let staying = keepOpen || (!blocked && (wanted || Self.opensFromMenuBar))
+        if staying {
             present()
         } else {
             dismiss()
         }
+        debugLog("refresh staying=\(staying) blocked=\(blocked) wanted=\(wanted) keepOpen=\(keepOpen)")
         // The cursor is watched while hover is enabled, even with an empty
         // line, so pushing against the top edge always works.
         if Self.opensFromMenuBar { startMouseTracking() } else { stopMouseTracking() }
@@ -383,9 +394,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard isPresent else { return }
         isPresent = false
         setRevealed(false)
+        debugLog("dismiss")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, !self.isPresent else { return }
             self.panel.orderOut(nil)
+        }
+    }
+
+    /// Writes one line to the diagnostic log with the frontmost app, so a
+    /// report like "it does not come down on Doubao/WeChat" can be traced to
+    /// the exact condition that failed.
+    private func debugLog(_ message: String) {
+        let app = NSWorkspace.shared.frontmostApplication?.localizedName ?? "?"
+        let line = "\(Date().timeIntervalSince1970) [\(app)] \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        do {
+            try FileManager.default.createDirectory(
+                at: Self.debugLogURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+        } catch {}
+        if let handle = try? FileHandle(forWritingTo: Self.debugLogURL) {
+            defer { try? handle.close() }
+            handle.seekToEndOfFile()
+            handle.write(data)
+        } else {
+            try? data.write(to: Self.debugLogURL)
         }
     }
 
@@ -422,6 +456,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func toggle() {
+        debugLog("toggle revealed=\(isRevealed)")
         if isRevealed {
             setRevealed(false)
             if line.liveCount == 0 {
@@ -477,6 +512,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.menuBarSuppressed = true
                 self.menuBarSuppressedUntil = Date().addingTimeInterval(1.5)
                 self.hotZoneSince = nil
+                self.debugLog("menu bar click, suppressing 1.5s")
                 if self.isRevealed {
                     self.pinned = false
                     self.setRevealed(false)
@@ -501,6 +537,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let inMenuBar = screenUnderPointer.map { NSMouseInRect(mouse, Self.menuBarBand(of: $0), false) } ?? false
         if !inMenuBar { menuBarSuppressed = false }
         if menuBarSuppressed && now >= menuBarSuppressedUntil { menuBarSuppressed = false }
+        if inMenuBar != lastLogInMenuBar || menuBarSuppressed != lastLogSuppressed {
+            lastLogInMenuBar = inMenuBar
+            lastLogSuppressed = menuBarSuppressed
+            debugLog("tick inMenuBar=\(inMenuBar) suppressed=\(menuBarSuppressed) mouseY=\(mouse.y) frameMaxY=\(screenUnderPointer?.frame.maxY ?? -1)")
+        }
 
         guard isRevealed else {
             // Resting in the menu bar brings the line down on that screen.
