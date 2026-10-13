@@ -343,17 +343,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Decides whether the panel is ordered in at all: something to show,
     /// and no full screen app on that screen.
+    ///
+    /// The panel stays in (tucked away) while hover-from-the-menu-bar is on,
+    /// even when the line is empty, so resting the pointer on the menu bar
+    /// always brings the line down. Without that, an empty line would turn
+    /// the watcher off and hover would silently stop working until the
+    /// shortcut or the menu was used. Opening on purpose (`keepOpen`, the
+    /// shortcut or the menu) always keeps it in, full screen or not, so the
+    /// shortcut always works.
     private func refresh() {
         let blocked = panel.screen.map(FullScreen.blocksLine(on:))
             ?? LinePanel.screenUnderPointer().map(FullScreen.blocksLine(on:)) ?? false
-        if wanted && !blocked {
+        if keepOpen || (!blocked && (wanted || Self.opensFromMenuBar)) {
             present()
         } else {
             dismiss()
         }
-        // The cursor is watched while there is a line, even tucked away,
-        // to notice it pushing against the top edge.
-        if wanted { startMouseTracking() } else { stopMouseTracking() }
+        // The cursor is watched while hover is enabled, even with an empty
+        // line, so pushing against the top edge always works.
+        if Self.opensFromMenuBar { startMouseTracking() } else { stopMouseTracking() }
     }
 
     private func present() {
